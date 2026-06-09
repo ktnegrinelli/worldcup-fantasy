@@ -167,7 +167,7 @@ export default function App() {
       <header className="hero">
         <div className="logo-circle">🏆</div>
         <div className="eyebrow">2026 FIFA WORLD CUP</div>
-        <h1>WORLD CUP OF FREEDOM 2026</h1>
+        <h1>WORLD CUP OF FREEDOM 2026!</h1>
         <p>12 managers · snake draft · 4 teams each</p>
         <button className="refresh-btn" onClick={refresh}>
           Live Refresh
