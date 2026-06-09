@@ -1,0 +1,31 @@
+﻿.admin-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.control-group span {
+  width: 16px;
+  text-align: center;
+  color: #f7e3a4;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.control-group button {
+  min-width: 28px;
+  height: 28px;
+  border: 1px solid rgba(215, 177, 74, 0.28);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #f7e3a4;
+  font-weight: 700;
+  cursor: pointer;
+}
