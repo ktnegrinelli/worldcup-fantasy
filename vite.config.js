@@ -7,6 +7,9 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
+      workbox: {
+        cleanupOutdatedCaches: true,
+      },
       manifest: {
         name: "World Cup of Freedom",
         short_name: "World Cup",
@@ -21,16 +24,16 @@ export default defineConfig({
             src: "/192.png",
             sizes: "192x192",
             type: "image/png",
-            purpose: "any"
+            purpose: "any",
           },
           {
             src: "/512.png",
             sizes: "512x512",
             type: "image/png",
-            purpose: "any"
-          }
-        ]
-      }
-    })
-  ]
+            purpose: "any",
+          },
+        ],
+      },
+    }),
+  ],
 });
