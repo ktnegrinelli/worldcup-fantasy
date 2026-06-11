@@ -97,6 +97,23 @@ export default function App() {
     loadTeams();
   }, []);
 
+  useEffect(() => {
+    const channel = supabase
+      .channel("teams-live-updates")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "teams" },
+        () => {
+          loadTeams();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const managers = useMemo(() => {
     const grouped = {};
 
