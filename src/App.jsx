@@ -102,9 +102,6 @@ export default function App() {
       .order("event_date", { ascending: true })
       .order("event_time", { ascending: true });
 
-    console.log("matches data:", data);
-    console.log("matches error:", error);
-
     if (error) {
       console.error(error);
       setLoadingMatches(false);
@@ -135,6 +132,14 @@ export default function App() {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  const teamsByName = useMemo(() => {
+    const map = {};
+    teams.forEach((team) => {
+      map[team.nation_name] = team;
+    });
+    return map;
+  }, [teams]);
 
   const managers = useMemo(() => {
     const grouped = {};
@@ -342,29 +347,48 @@ export default function App() {
             ) : upcomingMatches.length === 0 ? (
               <div className="admin-panel">No Upcoming Matches</div>
             ) : (
-              upcomingMatches.map((g) => (
-                <article
-                  className="manager-card"
-                  key={g.id_event || `${g.home_team}-${g.away_team}-${g.event_date}-${g.event_time}`}
-                >
-                  <div className="manager-top">
-                    <div>
-                      <h2>
-                        {g.home_team} vs {g.away_team}
-                      </h2>
-                      <p>
-                        {g.event_date || "Date unavailable"} {g.event_time || ""}
-                      </p>
-                    </div>
-                    <div className="totals">
-                      <div>
-                        <strong>{g.status || "NS"}</strong>
-                        <span>STATUS</span>
+              upcomingMatches.map((g) => {
+                const home = teamsByName[g.home_team];
+                const away = teamsByName[g.away_team];
+
+                return (
+                  <article
+                    className="manager-card"
+                    key={g.id_event || `${g.home_team}-${g.away_team}-${g.event_date}-${g.event_time}`}
+                  >
+                    <div className="manager-top">
+                      <div className="schedule-matchblock">
+                        <div className="schedule-teamline">
+                          <img className="flag-img inline-flag" src={flagUrl(g.home_team)} alt={`${g.home_team} flag`} />
+                          <div>
+                            <div className="team-name">{g.home_team}</div>
+                            <div className="team-manager">({home?.manager || "Unassigned"})</div>
+                          </div>
+                        </div>
+
+                        <div className="schedule-teamline">
+                          <img className="flag-img inline-flag" src={flagUrl(g.away_team)} alt={`${g.away_team} flag`} />
+                          <div>
+                            <div className="team-name">{g.away_team}</div>
+                            <div className="team-manager">({away?.manager || "Unassigned"})</div>
+                          </div>
+                        </div>
+
+                        <p>
+                          {g.event_date || "Date unavailable"} {g.event_time || ""}
+                        </p>
+                      </div>
+
+                      <div className="totals">
+                        <div>
+                          <strong>{g.status || "NS"}</strong>
+                          <span>STATUS</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </article>
-              ))
+                  </article>
+                );
+              })
             )}
           </section>
         )}
