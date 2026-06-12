@@ -98,7 +98,7 @@ export default function App() {
     setLoadingMatches(true);
     const { data, error } = await supabase
       .from("matches")
-      .select("id_event,event_name,event_date,event_time,home_team,away_team,status,home_team_name_en,away_team_name_en,finished")
+      .select("id_event,event_name,event_date,event_time,home_team,away_team,status,league_id,round,group_name,home_score,away_score,finished")
       .order("event_date", { ascending: true })
       .order("event_time", { ascending: true });
 
@@ -350,7 +350,7 @@ export default function App() {
                   <div className="manager-top">
                     <div>
                       <h2>
-                        {g.home_team_name_en || g.home_team} vs {g.away_team_name_en || g.away_team}
+                        {g.home_team} vs {g.away_team}
                       </h2>
                       <p>
                         {g.event_date || "Date unavailable"} {g.event_time || ""}
