@@ -159,7 +159,7 @@ export default function App() {
 
   const upcomingMatches = useMemo(() => {
     return (matches || [])
-      .filter((g) => String(g.finished ?? "").toUpperCase() !== "TRUE")
+      .filter((g) => String(g.status ?? "").toUpperCase() !== "FT")
       .sort((a, b) => String(a.local_date ?? "").localeCompare(String(b.local_date ?? "")));
   }, [matches]);
 
