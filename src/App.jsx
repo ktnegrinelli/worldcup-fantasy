@@ -65,27 +65,6 @@ function flagUrl(team) {
   return `https://flagcdn.com/w40/${code}.png`;
 }
 
-function buildDateTime(eventDate, eventTime) {
-  if (!eventDate) return null;
-  const [month, day, year] = String(eventDate).split("-");
-  if (!month || !day || !year) return null;
-  const safeTime = String(eventTime || "00:00").trim().slice(0, 5);
-  const iso = `${year}-${month}-${day}T${safeTime}:00`;
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-
-function formatMatchLabel(eventDate, eventTime) {
-  const d = buildDateTime(eventDate, eventTime);
-  if (!d) return `${eventDate || ""} ${eventTime || ""}`.trim();
-  return d.toLocaleString([], {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
 export default function App() {
   const [view, setView] = useState("standings");
   const [adminMode, setAdminMode] = useState(false);
@@ -119,9 +98,8 @@ export default function App() {
     setLoadingMatches(true);
     const { data, error } = await supabase
       .from("matches")
-      .select("id_event,event_name,event_date,event_time,home_team,away_team,status,home_team_name_en,away_team_name_en,finished")
-      .order("event_date", { ascending: true })
-      .order("event_time", { ascending: true });
+      .select("id_event,event_name,local_date,home_team,away_team,status,home_team_name_en,away_team_name_en,finished")
+      .order("local_date", { ascending: true });
 
     if (error) {
       console.error(error);
@@ -180,21 +158,9 @@ export default function App() {
   }, [teams]);
 
   const upcomingMatches = useMemo(() => {
-    const now = new Date();
-
     return (matches || [])
-      .filter((g) => {
-        const finished = String(g.finished ?? "").toUpperCase() === "TRUE";
-        if (finished) return false;
-        const d = buildDateTime(g.event_date, g.event_time);
-        if (!d) return true;
-        return d > now;
-      })
-      .sort((a, b) => {
-        const da = buildDateTime(a.event_date, a.event_time)?.getTime() ?? 0;
-        const db = buildDateTime(b.event_date, b.event_time)?.getTime() ?? 0;
-        return da - db;
-      });
+      .filter((g) => String(g.finished ?? "").toUpperCase() !== "TRUE")
+      .sort((a, b) => String(a.local_date ?? "").localeCompare(String(b.local_date ?? "")));
   }, [matches]);
 
   const openAdmin = () => {
@@ -363,13 +329,13 @@ export default function App() {
               <div className="admin-panel">No Upcoming Matches</div>
             ) : (
               upcomingMatches.map((g) => (
-                <article className="manager-card" key={g.id_event || `${g.home_team}-${g.away_team}-${g.event_date}-${g.event_time}`}>
+                <article className="manager-card" key={g.id_event || `${g.home_team}-${g.away_team}-${g.local_date}`}>
                   <div className="manager-top">
                     <div>
                       <h2>
                         {g.home_team_name_en || g.home_team} vs {g.away_team_name_en || g.away_team}
                       </h2>
-                      <p>{formatMatchLabel(g.event_date, g.event_time)}</p>
+                      <p>{g.local_date || "Date unavailable"}</p>
                     </div>
                     <div className="totals">
                       <div>
