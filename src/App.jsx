@@ -65,20 +65,19 @@ function flagUrl(team) {
   return `https://flagcdn.com/w40/${code}.png`;
 }
 
-function parseMatchDate(g) {
-  const raw = String(g.local_date ?? "").trim();
-  if (!raw) return null;
-  const [datePart, timePart] = raw.split(" ");
-  const [month, day, year] = (datePart || "").split("/");
+function buildDateTime(eventDate, eventTime) {
+  if (!eventDate) return null;
+  const [month, day, year] = String(eventDate).split("-");
   if (!month || !day || !year) return null;
-  const iso = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}T${timePart || "00:00"}:00`;
+  const safeTime = String(eventTime || "00:00").trim().slice(0, 5);
+  const iso = `${year}-${month}-${day}T${safeTime}:00`;
   const d = new Date(iso);
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-function formatMatchLabel(g) {
-  const d = parseMatchDate(g);
-  if (!d) return String(g.local_date ?? "");
+function formatMatchLabel(eventDate, eventTime) {
+  const d = buildDateTime(eventDate, eventTime);
+  if (!d) return `${eventDate || ""} ${eventTime || ""}`.trim();
   return d.toLocaleString([], {
     month: "short",
     day: "numeric",
@@ -120,7 +119,7 @@ export default function App() {
     setLoadingMatches(true);
     const { data, error } = await supabase
       .from("matches")
-      .select("id_event,event_name,event_date,event_time,home_team,away_team,status,local_date,home_team_name_en,away_team_name_en,finished")
+      .select("id_event,event_name,event_date,event_time,home_team,away_team,status,home_team_name_en,away_team_name_en,finished")
       .order("event_date", { ascending: true })
       .order("event_time", { ascending: true });
 
@@ -187,13 +186,13 @@ export default function App() {
       .filter((g) => {
         const finished = String(g.finished ?? "").toUpperCase() === "TRUE";
         if (finished) return false;
-        const d = parseMatchDate(g);
+        const d = buildDateTime(g.event_date, g.event_time);
         if (!d) return true;
         return d > now;
       })
       .sort((a, b) => {
-        const da = parseMatchDate(a)?.getTime() ?? 0;
-        const db = parseMatchDate(b)?.getTime() ?? 0;
+        const da = buildDateTime(a.event_date, a.event_time)?.getTime() ?? 0;
+        const db = buildDateTime(b.event_date, b.event_time)?.getTime() ?? 0;
         return da - db;
       });
   }, [matches]);
@@ -361,16 +360,16 @@ export default function App() {
             {loadingMatches ? (
               <div className="admin-panel">Loading schedule...</div>
             ) : upcomingMatches.length === 0 ? (
-              <div className="admin-panel">No upcoming matches found.</div>
+              <div className="admin-panel">No Upcoming Matches</div>
             ) : (
               upcomingMatches.map((g) => (
-                <article className="manager-card" key={g.id_event || `${g.home_team}-${g.away_team}-${g.local_date}`}>
+                <article className="manager-card" key={g.id_event || `${g.home_team}-${g.away_team}-${g.event_date}-${g.event_time}`}>
                   <div className="manager-top">
                     <div>
                       <h2>
                         {g.home_team_name_en || g.home_team} vs {g.away_team_name_en || g.away_team}
                       </h2>
-                      <p>{formatMatchLabel(g)}</p>
+                      <p>{formatMatchLabel(g.event_date, g.event_time)}</p>
                     </div>
                     <div className="totals">
                       <div>
