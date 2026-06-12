@@ -98,8 +98,12 @@ export default function App() {
     setLoadingMatches(true);
     const { data, error } = await supabase
       .from("matches")
-      .select("id_event,event_name,local_date,home_team,away_team,status,home_team_name_en,away_team_name_en,finished")
-      .order("local_date", { ascending: true });
+      .select("id_event,event_name,event_date,event_time,home_team,away_team,status,home_team_name_en,away_team_name_en,finished")
+      .order("event_date", { ascending: true })
+      .order("event_time", { ascending: true });
+
+    console.log("matches data:", data);
+    console.log("matches error:", error);
 
     if (error) {
       console.error(error);
@@ -160,7 +164,11 @@ export default function App() {
   const upcomingMatches = useMemo(() => {
     return (matches || [])
       .filter((g) => String(g.status ?? "").toUpperCase() !== "FT")
-      .sort((a, b) => String(a.local_date ?? "").localeCompare(String(b.local_date ?? "")));
+      .sort((a, b) => {
+        const ad = `${a.event_date || ""} ${a.event_time || ""}`;
+        const bd = `${b.event_date || ""} ${b.event_time || ""}`;
+        return ad.localeCompare(bd);
+      });
   }, [matches]);
 
   const openAdmin = () => {
@@ -219,10 +227,16 @@ export default function App() {
       </header>
 
       <nav className="tabs">
-        <button className={`tab ${view === "standings" ? "active" : ""}`} onClick={() => setView("standings")}>
+        <button
+          className={`tab ${view === "standings" ? "active" : ""}`}
+          onClick={() => setView("standings")}
+        >
           Standings
         </button>
-        <button className={`tab ${view === "schedule" ? "active" : ""}`} onClick={() => setView("schedule")}>
+        <button
+          className={`tab ${view === "schedule" ? "active" : ""}`}
+          onClick={() => setView("schedule")}
+        >
           Schedule
         </button>
       </nav>
@@ -329,13 +343,18 @@ export default function App() {
               <div className="admin-panel">No Upcoming Matches</div>
             ) : (
               upcomingMatches.map((g) => (
-                <article className="manager-card" key={g.id_event || `${g.home_team}-${g.away_team}-${g.local_date}`}>
+                <article
+                  className="manager-card"
+                  key={g.id_event || `${g.home_team}-${g.away_team}-${g.event_date}-${g.event_time}`}
+                >
                   <div className="manager-top">
                     <div>
                       <h2>
                         {g.home_team_name_en || g.home_team} vs {g.away_team_name_en || g.away_team}
                       </h2>
-                      <p>{g.local_date || "Date unavailable"}</p>
+                      <p>
+                        {g.event_date || "Date unavailable"} {g.event_time || ""}
+                      </p>
                     </div>
                     <div className="totals">
                       <div>
