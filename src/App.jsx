@@ -60,6 +60,11 @@ const flagMap = {
   England: "gb-eng",
 };
 
+const normalizeName = (name = "") =>
+  String(name)
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+
 function flagUrl(team) {
   const code = flagMap[team] || "un";
   return `https://flagcdn.com/w40/${code}.png`;
@@ -136,7 +141,7 @@ export default function App() {
   const teamsByName = useMemo(() => {
     const map = {};
     teams.forEach((team) => {
-      map[team.nation_name] = team;
+      map[normalizeName(team.nation_name)] = team;
     });
     return map;
   }, [teams]);
@@ -348,8 +353,10 @@ export default function App() {
               <div className="admin-panel">No Upcoming Matches</div>
             ) : (
               upcomingMatches.map((g) => {
-                const home = teamsByName[g.home_team];
-                const away = teamsByName[g.away_team];
+                const home = teamsByName[normalizeName(g.home_team)];
+                const away = teamsByName[normalizeName(g.away_team)];
+                const homeFlag = home?.nation_name || g.home_team;
+                const awayFlag = away?.nation_name || g.away_team;
 
                 return (
                   <article
@@ -359,7 +366,11 @@ export default function App() {
                     <div className="manager-top">
                       <div className="schedule-matchblock">
                         <div className="schedule-teamline">
-                          <img className="flag-img inline-flag" src={flagUrl(g.home_team)} alt={`${g.home_team} flag`} />
+                          <img
+                            className="flag-img inline-flag"
+                            src={flagUrl(homeFlag)}
+                            alt={`${g.home_team} flag`}
+                          />
                           <div>
                             <div className="team-name">{g.home_team}</div>
                             <div className="team-manager">({home?.manager || "Unassigned"})</div>
@@ -367,7 +378,11 @@ export default function App() {
                         </div>
 
                         <div className="schedule-teamline">
-                          <img className="flag-img inline-flag" src={flagUrl(g.away_team)} alt={`${g.away_team} flag`} />
+                          <img
+                            className="flag-img inline-flag"
+                            src={flagUrl(awayFlag)}
+                            alt={`${g.away_team} flag`}
+                          />
                           <div>
                             <div className="team-name">{g.away_team}</div>
                             <div className="team-manager">({away?.manager || "Unassigned"})</div>
