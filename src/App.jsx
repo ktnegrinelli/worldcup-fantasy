@@ -7,6 +7,8 @@ const supabase = createClient(
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
 );
 
+const ADMIN_PASSWORD = "FIFAwc2026";
+
 const flagMap = {
   Spain: "es",
   "South Korea": "kr",
@@ -87,10 +89,14 @@ function formatMatchLabel(g) {
 
 export default function App() {
   const [view, setView] = useState("standings");
+  const [adminMode, setAdminMode] = useState(false);
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [teams, setTeams] = useState([]);
   const [matches, setMatches] = useState([]);
   const [loadingTeams, setLoadingTeams] = useState(true);
   const [loadingMatches, setLoadingMatches] = useState(true);
+  const [savingId, setSavingId] = useState(null);
 
   async function loadTeams() {
     setLoadingTeams(true);
@@ -101,6 +107,7 @@ export default function App() {
 
     if (error) {
       console.error(error);
+      setError("Could not load teams");
       setLoadingTeams(false);
       return;
     }
@@ -191,6 +198,49 @@ export default function App() {
       });
   }, [matches]);
 
+  const openAdmin = () => {
+    if (password === ADMIN_PASSWORD) {
+      setAdminMode(true);
+      setError("");
+      return;
+    }
+    setError("Wrong password");
+  };
+
+  const closeAdmin = () => {
+    setAdminMode(false);
+    setPassword("");
+    setError("");
+  };
+
+  const refresh = () => {
+    loadTeams();
+    loadMatches();
+  };
+
+  const updateTeam = async (teamId, field, delta) => {
+    const team = teams.find((t) => t.id === teamId);
+    if (!team) return;
+
+    const nextValue = Math.max(0, (team[field] || 0) + delta);
+
+    setSavingId(teamId);
+    const { error } = await supabase
+      .from("teams")
+      .update({ [field]: nextValue })
+      .eq("id", teamId);
+
+    setSavingId(null);
+
+    if (error) {
+      console.error(error);
+      setError("Could not save update");
+      return;
+    }
+
+    await loadTeams();
+  };
+
   return (
     <div className="app-shell">
       <header className="hero">
@@ -198,22 +248,34 @@ export default function App() {
         <div className="eyebrow">2026 FIFA WORLD CUP</div>
         <h1>WORLD CUP OF FREEDOM 2026!</h1>
         <p>12 managers · snake draft · 4 teams each</p>
+        <button className="refresh-btn" onClick={refresh}>
+          Live Refresh
+        </button>
       </header>
 
       <nav className="tabs">
-        <button
-          className={`tab ${view === "standings" ? "active" : ""}`}
-          onClick={() => setView("standings")}
-        >
+        <button className={`tab ${view === "standings" ? "active" : ""}`} onClick={() => setView("standings")}>
           Standings
         </button>
-        <button
-          className={`tab ${view === "schedule" ? "active" : ""}`}
-          onClick={() => setView("schedule")}
-        >
+        <button className={`tab ${view === "schedule" ? "active" : ""}`} onClick={() => setView("schedule")}>
           Schedule
         </button>
       </nav>
+
+      <section className="admin-panel">
+        <h3>Admin Access</h3>
+        <input
+          className="admin-input"
+          type="password"
+          placeholder="Enter password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        {error && <p className="admin-error">{error}</p>}
+        <button className="refresh-btn admin-btn" onClick={adminMode ? closeAdmin : openAdmin}>
+          {adminMode ? "Lock Admin" : "Unlock Admin"}
+        </button>
+      </section>
 
       <main className="content">
         {view === "standings" && (
@@ -263,6 +325,26 @@ export default function App() {
                                 {w}W-{d}D-{l}L · {w * 3 + d} pts · {g} goals
                               </div>
                             </div>
+
+                            {adminMode && (
+                              <div className="admin-controls">
+                                <div className="control-group">
+                                  <span>W</span>
+                                  <button disabled={savingId === team.id} onClick={() => updateTeam(team.id, "wins", -1)}>-</button>
+                                  <button disabled={savingId === team.id} onClick={() => updateTeam(team.id, "wins", 1)}>+</button>
+                                </div>
+                                <div className="control-group">
+                                  <span>D</span>
+                                  <button disabled={savingId === team.id} onClick={() => updateTeam(team.id, "draws", -1)}>-</button>
+                                  <button disabled={savingId === team.id} onClick={() => updateTeam(team.id, "draws", 1)}>+</button>
+                                </div>
+                                <div className="control-group">
+                                  <span>G</span>
+                                  <button disabled={savingId === team.id} onClick={() => updateTeam(team.id, "goals_scored", -1)}>-</button>
+                                  <button disabled={savingId === team.id} onClick={() => updateTeam(team.id, "goals_scored", 1)}>+</button>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
