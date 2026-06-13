@@ -60,15 +60,34 @@ const flagMap = {
   England: "gb-eng",
 };
 
-const normalizeName = (name = "") =>
-  String(name)
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "");
+const aliasMap = {
+  "unitedstates": "usa",
+  "unitedstatesofamerica": "usa",
+  "curaçao": "curacao",
+  "cote divoire": "ivorycoast",
+  "ivorycoast": "ivorycoast",
+  "southkorea": "southkorea",
+  "northkorea": "northkorea",
+};
 
-function flagUrl(team) {
-  const code = flagMap[team] || "un";
-  return `https://flagcdn.com/w40/${code}.png`;
-}
+const normalizeName = (name = "") => {
+  const raw = String(name)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "");
+  return aliasMap[raw] || raw;
+};
+
+const flagUrlFromCode = (code) => {
+  const safe = String(code || "").toLowerCase() || "un";
+  return `https://flagcdn.com/w40/${safe}.png`;
+};
+
+const flagUrl = (teamOrCode) => {
+  const code = flagMap[teamOrCode] || teamOrCode || "un";
+  return flagUrlFromCode(code);
+};
 
 export default function App() {
   const [view, setView] = useState("standings");
@@ -141,7 +160,8 @@ export default function App() {
   const teamsByName = useMemo(() => {
     const map = {};
     teams.forEach((team) => {
-      map[normalizeName(team.nation_name)] = team;
+      if (team.nation_name) map[normalizeName(team.nation_name)] = team;
+      if (team.fifa_code) map[normalizeName(team.fifa_code)] = team;
     });
     return map;
   }, [teams]);
@@ -157,15 +177,11 @@ export default function App() {
 
     return Object.entries(grouped)
       .map(([manager, managerTeams]) => {
-        const points = managerTeams.reduce(
-          (sum, team) => sum + (team.wins || 0) * 3 + (team.draws || 0),
-          0
-        );
+        const points = managerTeams.reduce((sum, team) => sum + (team.wins || 0) * 3 + (team.draws || 0), 0);
         const goals = managerTeams.reduce((sum, team) => sum + (team.goals_scored || 0), 0);
         const wins = managerTeams.reduce((sum, team) => sum + (team.wins || 0), 0);
         const draws = managerTeams.reduce((sum, team) => sum + (team.draws || 0), 0);
         const losses = managerTeams.reduce((sum, team) => sum + (team.losses || 0), 0);
-
         return { manager, managerTeams, points, goals, wins, draws, losses };
       })
       .sort((a, b) => b.points - a.points || b.goals - a.goals || b.wins - a.wins);
@@ -208,10 +224,7 @@ export default function App() {
     const nextValue = Math.max(0, (team[field] || 0) + delta);
 
     setSavingId(teamId);
-    const { error } = await supabase
-      .from("teams")
-      .update({ [field]: nextValue })
-      .eq("id", teamId);
+    const { error } = await supabase.from("teams").update({ [field]: nextValue }).eq("id", teamId);
 
     setSavingId(null);
 
@@ -237,16 +250,10 @@ export default function App() {
       </header>
 
       <nav className="tabs">
-        <button
-          className={`tab ${view === "standings" ? "active" : ""}`}
-          onClick={() => setView("standings")}
-        >
+        <button className={`tab ${view === "standings" ? "active" : ""}`} onClick={() => setView("standings")}>
           Standings
         </button>
-        <button
-          className={`tab ${view === "schedule" ? "active" : ""}`}
-          onClick={() => setView("schedule")}
-        >
+        <button className={`tab ${view === "schedule" ? "active" : ""}`} onClick={() => setView("schedule")}>
           Schedule
         </button>
       </nav>
@@ -305,7 +312,7 @@ export default function App() {
                           <div className="team-row" key={team.id}>
                             <img
                               className="flag-img"
-                              src={flagUrl(team.nation_name)}
+                              src={flagUrl(team.flag_code || team.fifa_code || team.nation_name)}
                               alt={`${team.nation_name} flag`}
                             />
                             <div className="team-details">
@@ -355,8 +362,11 @@ export default function App() {
               upcomingMatches.map((g) => {
                 const home = teamsByName[normalizeName(g.home_team)];
                 const away = teamsByName[normalizeName(g.away_team)];
-                const homeFlag = home?.nation_name || g.home_team;
-                const awayFlag = away?.nation_name || g.away_team;
+
+                const homeLabel = home?.nation_name || g.home_team || "UNMAPPED";
+                const awayLabel = away?.nation_name || g.away_team || "UNMAPPED";
+                const homeFlagKey = home?.flag_code || home?.fifa_code || g.home_team || "un";
+                const awayFlagKey = away?.flag_code || away?.fifa_code || g.away_team || "un";
 
                 return (
                   <article
@@ -366,25 +376,17 @@ export default function App() {
                     <div className="manager-top">
                       <div className="schedule-matchblock">
                         <div className="schedule-teamline">
-                          <img
-                            className="flag-img inline-flag"
-                            src={flagUrl(homeFlag)}
-                            alt={`${g.home_team} flag`}
-                          />
+                          <img className="flag-img inline-flag" src={flagUrl(homeFlagKey)} alt={`${homeLabel} flag`} />
                           <div>
-                            <div className="team-name">{g.home_team}</div>
+                            <div className="team-name">{homeLabel}</div>
                             <div className="team-manager">({home?.manager || "Unassigned"})</div>
                           </div>
                         </div>
 
                         <div className="schedule-teamline">
-                          <img
-                            className="flag-img inline-flag"
-                            src={flagUrl(awayFlag)}
-                            alt={`${g.away_team} flag`}
-                          />
+                          <img className="flag-img inline-flag" src={flagUrl(awayFlagKey)} alt={`${awayLabel} flag`} />
                           <div>
-                            <div className="team-name">{g.away_team}</div>
+                            <div className="team-name">{awayLabel}</div>
                             <div className="team-manager">({away?.manager || "Unassigned"})</div>
                           </div>
                         </div>
